@@ -44,11 +44,6 @@ contract MultiSig_Treasury {
 
     Transaction[] public transactions;
 
-    modifier onlyOwner() {
-        require(isOwner[msg.sender], "not owner");
-        _;
-    }
-
     modifier txExists(uint _txIndex) {
         require(_txIndex < transactions.length, "tx does not exist");
         _;
@@ -140,17 +135,18 @@ contract MultiSig_Treasury {
             transaction.numConfirmations >= numConfirmationsRequired,
             "cannot execute tx"
         );
-
-        transaction.executed = true;
+        uint256 amount = transaction.value;
+        uint256 token_balance = token.balanceOf(address(this));
+        require(amount <= token_balance, "token balance is low");
 
         address from = treasury;
         address to = transaction.to;
-        uint256 amount = transaction.value;
 
-        // token.transferFrom(, transaction.to, amount);
+        // bool success = token.transferFrom(from, transaction.to, amount);
+        // require(success, "tx failed");
+        require(token.transferFrom(from, transaction.to, amount), "tx failed");
+        transaction.executed = true;
 
-        bool success = token.transferFrom(from, transaction.to, amount);
-        require(success, "tx failed");
         emit Transfer_JCO(from, to, amount);
         emit ExecuteTransaction(msg.sender, _txIndex);
     }
