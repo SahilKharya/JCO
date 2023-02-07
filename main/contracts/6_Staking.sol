@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
+/**
+ * @title Treasury MultiSignature Contract
+ * @dev Will call the functions from the treasury
+ * -- #3 -- Deployed after the token contract
+ */
 
 import "./JCO.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract MultiSigWallet {
+// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"]
+contract Staking {
     IERC20 private token;
     address treasury;
     event Transfer_JCO(address from, address to, uint256 amount);
@@ -53,12 +59,17 @@ contract MultiSigWallet {
         _;
     }
 
-    modifier notConfirmed(uint _txIndex) {
-        require(!isConfirmed[_txIndex][msg.sender], "tx already confirmed");
+    modifier notConfirmed(uint _txIndex, address msg_sender) {
+        require(!isConfirmed[_txIndex][msg_sender], "tx already confirmed");
         _;
     }
 
-    constructor(address[] memory _owners, uint _numConfirmationsRequired, address _token, address _treasury) {
+    constructor(
+        address[] memory _owners,
+        uint _numConfirmationsRequired,
+        address _token,
+        address _treasury
+    ) {
         require(_owners.length > 0, "owners required");
         require(
             _numConfirmationsRequired > 0 &&
@@ -89,7 +100,7 @@ contract MultiSigWallet {
         address _to,
         uint _value,
         bytes memory _data
-    ) public onlyOwner {
+    ) public {
         uint txIndex = transactions.length;
 
         transactions.push(
@@ -105,23 +116,21 @@ contract MultiSigWallet {
         emit SubmitTransaction(msg.sender, txIndex, _to, _value, _data);
     }
 
-    function confirmTransaction(uint _txIndex)
+    function confirmTransaction(uint _txIndex, address msg_sender)
         public
-        onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
-        notConfirmed(_txIndex)
+        notConfirmed(_txIndex, msg_sender)
     {
         Transaction storage transaction = transactions[_txIndex];
         transaction.numConfirmations += 1;
-        isConfirmed[_txIndex][msg.sender] = true;
+        isConfirmed[_txIndex][msg_sender] = true;
 
-        emit ConfirmTransaction(msg.sender, _txIndex);
+        emit ConfirmTransaction(msg_sender, _txIndex);
     }
 
     function executeTransaction(uint _txIndex)
         public
-        onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
@@ -134,32 +143,31 @@ contract MultiSigWallet {
 
         transaction.executed = true;
 
-        address from = treasury;
+        address from = address(this);
         address to = transaction.to;
         uint256 amount = transaction.value;
 
         // token.transferFrom(, transaction.to, amount);
 
-        bool success = token.transferFrom(from, transaction.to, amount);
+        bool success = token.transfer(transaction.to, amount);
         require(success, "tx failed");
         emit Transfer_JCO(from, to, amount);
         emit ExecuteTransaction(msg.sender, _txIndex);
     }
 
-    function revokeConfirmation(uint _txIndex)
+    function revokeConfirmation(uint _txIndex, address msg_sender)
         public
-        onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
         Transaction storage transaction = transactions[_txIndex];
 
-        require(isConfirmed[_txIndex][msg.sender], "tx not confirmed");
+        require(isConfirmed[_txIndex][msg_sender], "tx not confirmed");
 
         transaction.numConfirmations -= 1;
-        isConfirmed[_txIndex][msg.sender] = false;
+        isConfirmed[_txIndex][msg_sender] = false;
 
-        emit RevokeConfirmation(msg.sender, _txIndex);
+        emit RevokeConfirmation(msg_sender, _txIndex);
     }
 
     function getOwners() public view returns (address[] memory) {
@@ -190,5 +198,9 @@ contract MultiSigWallet {
             transaction.executed,
             transaction.numConfirmations
         );
+    }
+
+    function getContractAddress() public view returns (address) {
+        return address(this);
     }
 }

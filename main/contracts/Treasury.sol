@@ -7,5 +7,4 @@ contract Treasury {
     function approveOtherContract(IERC20 token, address _to_approve, uint _value) public {
         token.approve(_to_approve, _value);
     }
-
 }
