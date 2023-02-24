@@ -12,7 +12,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"]
 contract Fundraising {
     IERC20 private token;
-    address treasury;
     event Transfer_JCO(address from, address to, uint256 amount);
 
     event Deposit(address indexed sender, uint amount, uint balance);
@@ -44,11 +43,6 @@ contract Fundraising {
 
     Transaction[] public transactions;
 
-    modifier onlyOwner() {
-        require(isOwner[msg.sender], "not owner");
-        _;
-    }
-
     modifier txExists(uint _txIndex) {
         require(_txIndex < transactions.length, "tx does not exist");
         _;
@@ -67,8 +61,7 @@ contract Fundraising {
     constructor(
         address[] memory _owners,
         uint _numConfirmationsRequired,
-        address _token,
-        address _treasury
+        address _token
     ) {
         require(_owners.length > 0, "owners required");
         require(
@@ -89,7 +82,6 @@ contract Fundraising {
 
         numConfirmationsRequired = _numConfirmationsRequired;
         token = IERC20(_token);
-        treasury = _treasury;
     }
 
     receive() external payable {
@@ -140,17 +132,18 @@ contract Fundraising {
             transaction.numConfirmations >= numConfirmationsRequired,
             "cannot execute tx"
         );
-
-        transaction.executed = true;
+        uint256 amount = transaction.value * (10 ** 18);
+        uint256 token_balance = token.balanceOf(address(this));
+        require(amount <= token_balance, "token balance is low");
 
         address from = address(this);
         address to = transaction.to;
-        uint256 amount = transaction.value;
 
-        // token.transferFrom(, transaction.to, amount);
+        // bool success = token.transferFrom(from, transaction.to, amount);
+        // require(success, "tx failed");
+        require(token.transfer(transaction.to, amount), "tx failed");
+        transaction.executed = true;
 
-        bool success = token.transfer(transaction.to, amount);
-        require(success, "tx failed");
         emit Transfer_JCO(from, to, amount);
         emit ExecuteTransaction(msg.sender, _txIndex);
     }

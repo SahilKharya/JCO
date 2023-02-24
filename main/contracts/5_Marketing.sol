@@ -9,8 +9,8 @@ pragma solidity >=0.8.0 <0.9.0;
 import "./JCO.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"]
-contract Marketing {
+// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2", "0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"]
+contract Coinbase {
     IERC20 private token;
     address treasury;
     event Transfer_JCO(address from, address to, uint256 amount);
@@ -143,13 +143,13 @@ contract Marketing {
 
         transaction.executed = true;
 
-        address from = address(this);
+        address from = treasury;
         address to = transaction.to;
         uint256 amount = transaction.value;
 
         // token.transferFrom(, transaction.to, amount);
 
-        bool success = token.transfer(transaction.to, amount);
+        bool success = token.transferFrom(from, transaction.to, amount);
         require(success, "tx failed");
         emit Transfer_JCO(from, to, amount);
         emit ExecuteTransaction(msg.sender, _txIndex);
@@ -198,9 +198,5 @@ contract Marketing {
             transaction.executed,
             transaction.numConfirmations
         );
-    }
-
-    function getContractAddress() public view returns (address) {
-        return address(this);
     }
 }

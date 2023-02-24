@@ -135,8 +135,8 @@ contract MultiSig_Treasury {
             transaction.numConfirmations >= numConfirmationsRequired,
             "cannot execute tx"
         );
-        uint256 amount = transaction.value;
-        uint256 token_balance = token.balanceOf(address(this));
+        uint256 amount = transaction.value * (10 ** 18);
+        uint256 token_balance = token.balanceOf(treasury);
         require(amount <= token_balance, "token balance is low");
 
         address from = treasury;

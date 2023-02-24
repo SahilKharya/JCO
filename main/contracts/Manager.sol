@@ -3,20 +3,25 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "./JCO.sol";
 import "./MultiSig_Treasury.sol";
+import "./1_Fundraising.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // 0x617F2E2fD72FD9D5503197092aC168c91465E7f2
 contract JCO_Manager {
+    address sender;
     IERC20 tokenContract;
     MultiSig_Treasury treasuryContract;
-    address sender;
+    Fundraising fundContract;
     address[] public owners_TGW;
+    address[] public owners_Fund;
     mapping(address => bool) public isOwner_TGW;
+    mapping(address => bool) public isOwner_Fund;
 
-    constructor(address _token, address payable multi) {
+    constructor(address _token, address payable multi, address payable funding) {
         sender = msg.sender;
-        treasuryContract = MultiSig_Treasury(multi);
         tokenContract = IERC20(_token);
+
+        treasuryContract = MultiSig_Treasury(multi);
         owners_TGW = getOwners_TGW();
 
         for (uint256 i = 0; i < owners_TGW.length; i++) {
@@ -27,6 +32,18 @@ contract JCO_Manager {
 
             isOwner_TGW[owner] = true;
         }
+
+        fundContract = Fundraising(funding);
+        owners_Fund = getOwners_Fund();
+
+        for (uint256 i = 0; i < owners_Fund.length; i++) {
+            address owner = owners_Fund[i];
+
+            require(owner != address(0), "invalid owner");
+            require(!isOwner_Fund[owner], "owner not unique");
+
+            isOwner_Fund[owner] = true;
+        }
     }
 
     // ****     ERC20 Contract Functions  *****
@@ -34,6 +51,9 @@ contract JCO_Manager {
     // function buyNFT(uint256 price) external {
     //     tokenContract.transferFrom(msg.sender, msg.sender, price);
     // }
+
+
+
 
     // ****     Multi Sig Contract Functions  *****
 
@@ -84,6 +104,58 @@ contract JCO_Manager {
     {
         return treasuryContract.getTransaction(_txIndex);
     }
+
+
+    // Fundraising Wallet functions
+
+    modifier onlyOwner_Fund() {
+        require(isOwner_Fund[msg.sender], "not owner");
+        _;
+    }
+
+    function getOwners_Fund() public view returns (address[] memory) {
+        return fundContract.getOwners();
+    }
+
+    function submitTxn__Fund(
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) public onlyOwner_Fund {
+        return fundContract.submitTransaction(_to, _value, _data);
+    }
+
+    function confirmTxn_Fund(uint256 _txIndex) public onlyOwner_Fund {
+        return fundContract.confirmTransaction(_txIndex, msg.sender);
+    }
+
+    function executeTxn_Fund(uint256 _txIndex) public onlyOwner_Fund {
+        return fundContract.executeTransaction(_txIndex);
+    }
+
+    function revokeConfirmation_Fund(uint256 _txIndex) public onlyOwner_Fund {
+        return fundContract.revokeConfirmation(_txIndex, msg.sender);
+    }
+
+    function getTransactionCount_Fund() public view returns (uint256) {
+        return fundContract.getTransactionCount();
+    }
+
+    function getTxn_Fund(uint256 _txIndex)
+        public
+        view
+        returns (
+            address to,
+            uint256 value,
+            bytes memory data,
+            bool executed,
+            uint256 numConfirmations
+        )
+    {
+        return fundContract.getTransaction(_txIndex);
+    }
+
+
 
     function getsender()
         public
