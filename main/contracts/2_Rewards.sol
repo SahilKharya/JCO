@@ -94,6 +94,7 @@ contract Rewards {
         bytes memory _data
     ) public {
         uint256 txIndex = transactions.length;
+        require(_value > 0, "Value must be greater than zero");
 
         transactions.push(
             Transaction({

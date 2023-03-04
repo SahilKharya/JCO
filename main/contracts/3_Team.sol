@@ -12,7 +12,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"]
 contract Team {
     IERC20 private token;
-    address treasury;
     event Transfer_JCO(address from, address to, uint256 amount);
 
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
@@ -67,8 +66,7 @@ contract Team {
     constructor(
         address[] memory _owners,
         uint256 _numConfirmationsRequired,
-        address _token,
-        address _treasury
+        address _token
     ) {
         require(_owners.length > 0, "owners required");
         require(
@@ -89,7 +87,6 @@ contract Team {
 
         numConfirmationsRequired = _numConfirmationsRequired;
         token = IERC20(_token);
-        treasury = _treasury;
     }
 
     receive() external payable {
@@ -102,6 +99,7 @@ contract Team {
         bytes memory _data
     ) public {
         uint256 txIndex = transactions.length;
+        require(_value > 0, "Value must be greater than zero");
 
         transactions.push(
             Transaction({

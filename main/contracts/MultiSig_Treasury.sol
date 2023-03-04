@@ -38,7 +38,32 @@ contract MultiSig_Treasury {
         bool executed;
         uint256 numConfirmations;
     }
-
+    struct VestingSchedule {
+        uint256 releaseTime;
+        uint256 releaseAmount;
+        bool released;
+    }
+    struct OperationalWallets {
+        address payable _funding;
+        address payable _rewards;
+        address payable _team;
+        address payable _advisors;
+        address payable _marketing;
+        address payable _exchange;
+        address payable _foundation;
+        address payable _staking;
+    }
+    struct Time {
+        uint256 current_time;
+        uint256 month3;
+        uint256 month6;
+        uint256 month9;
+        uint256 month12;
+        uint256 month15;
+        uint256 month18;
+        uint256 month24;
+        uint256 month36;
+    }
     // mapping from tx index => owner => bool
     mapping(uint256 => mapping(address => bool)) public isConfirmed;
 
@@ -58,44 +83,6 @@ contract MultiSig_Treasury {
         require(!isConfirmed[_txIndex][msg_sender], "tx already confirmed");
         _;
     }
-
-    address public beneficiary;
-    uint256 public releaseTime;
-    uint256 public interval;
-    uint256 public releasedIntervals;
-
-    IERC20 public token;
-
-    constructor(
-        address _beneficiary,
-        uint256 _releaseTime,
-        uint256 _interval,
-        address _token
-    ) {
-        require(
-            _beneficiary != address(0),
-            "TokenTimelock: beneficiary is the zero address"
-        );
-        require(
-            _releaseTime > block.timestamp,
-            "TokenTimelock: release time is before current time"
-        );
-        require(
-            _interval > 0,
-            "TokenTimelock: interval must be greater than 0"
-        );
-
-        beneficiary = _beneficiary;
-        releaseTime = _releaseTime;
-        interval = _interval;
-        token = IERC20(_token);
-    }
-
-    uint256 public vesting_start_time;
-    uint256 public releaseInterval;
-
-    address[] public release1 = [];
-    address[] public owners;
 
     constructor(
         address[] memory _owners,
@@ -123,48 +110,18 @@ contract MultiSig_Treasury {
         numConfirmationsRequired = _numConfirmationsRequired;
         token = IERC20(_token);
         treasury = _treasury;
-
-        // Vesting values
-        vesting_start_time = block.timestamp;
-        vesting_start_time = block.timestamp;
-        vesting_start_time = block.timestamp;
+        
     }
 
     receive() external payable {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
 
-    function release(address beneficiary) public {
-        require(
-            block.timestamp >= vestingStartTime,
-            "Vesting period has not yet started"
-        );
-        require(
-            balances[beneficiary] > 0,
-            "Beneficiary does not have a balance"
-        );
-        require(
-            !conditionsMet[beneficiary],
-            "Beneficiary has already met the release conditions"
-        );
-        uint256 elapsed = block.timestamp - vestingStartTime;
-        uint256 periods = elapsed / releaseInterval;
-        uint256 tokensToRelease = (((totalTokens * releasePercentage) / 100) *
-            periods) / ((vestingDuration / releaseInterval) + 1);
-        uint256 tokensReleased = tokensToRelease -
-            ((balances[beneficiary] * lastReleased[beneficiary]) / totalTokens);
-        require(tokensReleased > 0, "No tokens to release");
-        lastReleased[beneficiary] = tokensToRelease;
-        conditionsMet[beneficiary] = true;
-        // transfer tokens to beneficiary
-        // require(token.transfer(beneficiary, tokensReleased), "Token transfer failed");
-    }
-
     function submitTransaction(
         address _to,
         uint256 _value,
         bytes memory _data
-    ) public {
+    ) external {
         uint256 txIndex = transactions.length;
 
         transactions.push(
@@ -181,7 +138,7 @@ contract MultiSig_Treasury {
     }
 
     function confirmTransaction(uint256 _txIndex, address msg_sender)
-        public
+        external
         txExists(_txIndex)
         notExecuted(_txIndex)
         notConfirmed(_txIndex, msg_sender)
@@ -193,8 +150,33 @@ contract MultiSig_Treasury {
         emit ConfirmTransaction(msg_sender, _txIndex);
     }
 
+    // function release(address beneficiary, uint256 index)
+    //     external
+    //     returns (bool)
+    // {
+    //     // require(msg.sender == owner, "Only owner can release tokens");
+    //     // IERC20 token = IERC20(tokenAddress);
+    //     uint256 numSchedules = vestingSchedules[beneficiary].length;
+    //     require(index < numSchedules, "Invalid index");
+    //     VestingSchedule storage schedule = vestingSchedules[beneficiary][index];
+    //     require(!schedule.released, "Tokens already released");
+    //     require(
+    //         block.timestamp >= schedule.releaseTime,
+    //         "Release time not reached"
+    //     );
+    //     require(
+    //         tokenContract.transferFrom(
+    //             treasury,
+    //             beneficiary,
+    //             schedule.releaseAmount
+    //         ),
+    //         "Transfer failed"
+    //     );
+    //     schedule.released = true;
+    //     return true;
+    // }
     function executeTransaction(uint256 _txIndex)
-        public
+        external
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
@@ -221,7 +203,7 @@ contract MultiSig_Treasury {
     }
 
     function revokeConfirmation(uint256 _txIndex, address msg_sender)
-        public
+        external
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
@@ -235,16 +217,16 @@ contract MultiSig_Treasury {
         emit RevokeConfirmation(msg_sender, _txIndex);
     }
 
-    function getOwners() public view returns (address[] memory) {
+    function getOwners() external view returns (address[] memory) {
         return owners;
     }
 
-    function getTransactionCount() public view returns (uint256) {
+    function getTransactionCount() external view returns (uint256) {
         return transactions.length;
     }
 
     function getTransaction(uint256 _txIndex)
-        public
+        external
         view
         returns (
             address to,
