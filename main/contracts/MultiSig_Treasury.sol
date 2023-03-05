@@ -8,51 +8,31 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "./JCO.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// ["0xf8e81D47203A594245E36C48e151709F0C19fBe8", "0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B","0x7EF2e0048f5bAeDe046f6BF797943daF4ED8CB47","0xDA0bab807633f07f013f94DD0E6A4F96F8742B53","0x358AA13c52544ECCEF6B0ADD0f801012ADAD5eE3","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99","0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d"]
 
 // ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2", "0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"]
 contract MultiSig_Treasury {
     IERC20 private token;
     address treasury;
+
     event Transfer_JCO(address from, address to, uint256 amount);
 
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
-    event SubmitTransaction(
-        address indexed owner,
-        uint256 indexed txIndex,
-        address indexed to,
-        uint256 value,
-        bytes data
-    );
     event ConfirmTransaction(address indexed owner, uint256 indexed txIndex);
     event RevokeConfirmation(address indexed owner, uint256 indexed txIndex);
     event ExecuteTransaction(address indexed owner, uint256 indexed txIndex);
 
-    address[] public owners;
-    mapping(address => bool) public isOwner;
-    uint256 public numConfirmationsRequired;
+    address[] owners;
+    mapping(address => bool) isOwner;
+    uint256 numConfirmationsRequired;
 
-    struct Transaction {
-        address to;
-        uint256 value;
-        bytes data;
-        bool executed;
-        uint256 numConfirmations;
-    }
     struct VestingSchedule {
         uint256 releaseTime;
         uint256 releaseAmount;
         bool released;
+        uint256 numConfirmations;
     }
-    struct OperationalWallets {
-        address payable _funding;
-        address payable _rewards;
-        address payable _team;
-        address payable _advisors;
-        address payable _marketing;
-        address payable _exchange;
-        address payable _foundation;
-        address payable _staking;
-    }
+
     struct Time {
         uint256 current_time;
         uint256 month3;
@@ -64,31 +44,55 @@ contract MultiSig_Treasury {
         uint256 month24;
         uint256 month36;
     }
-    // mapping from tx index => owner => bool
-    mapping(uint256 => mapping(address => bool)) public isConfirmed;
+    mapping(address => mapping(uint256 => mapping(address => bool)))
+        public isConfirmed;
 
-    Transaction[] public transactions;
+    mapping(address => VestingSchedule[]) public vestingSchedules;
 
-    modifier txExists(uint256 _txIndex) {
-        require(_txIndex < transactions.length, "tx does not exist");
+    modifier txExists(address _beneficiary, uint256 _txIndex) {
+        require(
+            _txIndex < vestingSchedules[_beneficiary].length,
+            "tx does not exist"
+        );
         _;
     }
 
-    modifier notExecuted(uint256 _txIndex) {
-        require(!transactions[_txIndex].executed, "tx already executed");
+    modifier notExecuted(address _beneficiary, uint256 _txIndex) {
+        require(
+            !vestingSchedules[_beneficiary][_txIndex].released,
+            "tx already executed"
+        );
         _;
     }
 
-    modifier notConfirmed(uint256 _txIndex, address msg_sender) {
-        require(!isConfirmed[_txIndex][msg_sender], "tx already confirmed");
+    modifier notConfirmed(
+        address _beneficiary,
+        uint256 _txIndex,
+        address msg_sender
+    ) {
+        require(
+            !isConfirmed[_beneficiary][_txIndex][msg_sender],
+            "tx already confirmed"
+        );
         _;
+    }
+    struct Wallets {
+        address payable _funding;
+        address payable _rewards;
+        address payable _team;
+        address payable _advisors;
+        address payable _marketing;
+        address payable _exchange;
+        address payable _foundation;
+        address payable _staking;
     }
 
     constructor(
         address[] memory _owners,
         uint256 _numConfirmationsRequired,
         address _token,
-        address _treasury
+        address _treasury,
+        Wallets memory _wallets
     ) {
         require(_owners.length > 0, "owners required");
         require(
@@ -106,114 +110,166 @@ contract MultiSig_Treasury {
             isOwner[owner] = true;
             owners.push(owner);
         }
-
         numConfirmationsRequired = _numConfirmationsRequired;
         token = IERC20(_token);
         treasury = _treasury;
-        
+        Time memory time;
+
+        // Timestamps
+
+        // For testing with shorter time
+        time.month3 = block.timestamp + 200 minutes;
+        time.month6 = block.timestamp + 400 minutes;
+        time.month9 = block.timestamp + 600 minutes;
+        time.month12 = block.timestamp + 900 minutes;
+        time.month15 = block.timestamp + 1100 minutes;
+        time.month18 = block.timestamp + 1600 minutes;
+        time.month24 = block.timestamp + 2100 minutes;
+        time.month36 = block.timestamp + 3000 minutes;
+
+        // function addVestingSchedule(address beneficiary, uint256 releaseTime, uint256 releaseAmount) external{
+        addVestingSchedule(_wallets._funding, time.current_time, 5960000);
+        addVestingSchedule(_wallets._funding, time.month3, 3960000);
+        addVestingSchedule(_wallets._funding, time.month6, 5710000);
+        addVestingSchedule(_wallets._funding, time.month9, 3960000);
+        addVestingSchedule(_wallets._funding, time.month12, 5710000);
+        addVestingSchedule(_wallets._funding, time.month15, 5710000);
+        addVestingSchedule(_wallets._funding, time.month18, 5710000);
+
+        addVestingSchedule(_wallets._rewards, time.current_time, 1150000);
+        addVestingSchedule(_wallets._rewards, time.month3, 1150000);
+        addVestingSchedule(_wallets._rewards, time.month6, 1150000);
+        addVestingSchedule(_wallets._rewards, time.month9, 1150000);
+
+        addVestingSchedule(_wallets._team, time.month12, 6000000);
+        addVestingSchedule(_wallets._team, time.month18, 6000000);
+        addVestingSchedule(_wallets._team, time.month24, 8000000);
+
+        addVestingSchedule(_wallets._advisors, time.month12, 15000000);
+        addVestingSchedule(_wallets._advisors, time.month24, 15000000);
+        addVestingSchedule(_wallets._advisors, time.month36, 125000000);
+
+        addVestingSchedule(_wallets._marketing, time.current_time, 15000000);
+        addVestingSchedule(_wallets._marketing, time.month6, 15000000);
+        addVestingSchedule(_wallets._marketing, time.month18, 125000000);
+
+        addVestingSchedule(_wallets._staking, time.current_time, 15000000);
+        addVestingSchedule(_wallets._staking, time.month3, 15000000);
+        addVestingSchedule(_wallets._staking, time.month6, 15000000);
+        addVestingSchedule(_wallets._staking, time.month9, 15000000);
+        addVestingSchedule(_wallets._staking, time.month12, 15000000);
+        addVestingSchedule(_wallets._staking, time.month18, 15000000);
+        addVestingSchedule(_wallets._staking, time.month24, 15000000);
+
+        addVestingSchedule(_wallets._exchange, time.current_time, 15000000);
+
+        addVestingSchedule(_wallets._foundation, time.month6, 15000000);
+        addVestingSchedule(_wallets._foundation, time.month12, 15000000);
+        addVestingSchedule(_wallets._foundation, time.month18, 125000000);
     }
 
     receive() external payable {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
 
-    function submitTransaction(
-        address _to,
-        uint256 _value,
-        bytes memory _data
-    ) external {
-        uint256 txIndex = transactions.length;
-
-        transactions.push(
-            Transaction({
-                to: _to,
-                value: _value,
-                data: _data,
-                executed: false,
-                numConfirmations: 0
-            })
+    function addVestingSchedule(
+        address beneficiary,
+        uint256 releaseTime,
+        uint256 releaseAmount
+    ) internal {
+        // require(msg.sender == msg.owner, "Only owner can add vesting schedule");
+        // IERC20 token = IERC20(tokenAddress);
+        uint256 amount = releaseAmount * (10**18);
+        require(
+            token.balanceOf(treasury) >= amount,
+            "Insufficient balance to add vesting schedule"
         );
-
-        emit SubmitTransaction(msg.sender, txIndex, _to, _value, _data);
+        // require(token.transferFrom(treasury, address(this), amount), "Transfer failed");
+        vestingSchedules[beneficiary].push(
+            VestingSchedule(releaseTime, amount, false, 0)
+        );
     }
 
-    function confirmTransaction(uint256 _txIndex, address msg_sender)
+    function confirmTransaction(
+        address _beneficiary,
+        uint256 _txIndex,
+        address msg_sender
+    )
         external
-        txExists(_txIndex)
-        notExecuted(_txIndex)
-        notConfirmed(_txIndex, msg_sender)
+        txExists(_beneficiary, _txIndex)
+        notExecuted(_beneficiary, _txIndex)
+        notConfirmed(_beneficiary, _txIndex, msg_sender)
     {
-        Transaction storage transaction = transactions[_txIndex];
-        transaction.numConfirmations += 1;
-        isConfirmed[_txIndex][msg_sender] = true;
+        VestingSchedule storage schedule = vestingSchedules[_beneficiary][
+            _txIndex
+        ];
 
+        require(
+            block.timestamp >= schedule.releaseTime,
+            "Release time not reached"
+        );
+        // Transaction storage transaction = transactions[_txIndex];
+        schedule.numConfirmations += 1;
+        isConfirmed[_beneficiary][_txIndex][msg_sender] = true;
         emit ConfirmTransaction(msg_sender, _txIndex);
     }
 
-    // function release(address beneficiary, uint256 index)
-    //     external
-    //     returns (bool)
-    // {
-    //     // require(msg.sender == owner, "Only owner can release tokens");
-    //     // IERC20 token = IERC20(tokenAddress);
-    //     uint256 numSchedules = vestingSchedules[beneficiary].length;
-    //     require(index < numSchedules, "Invalid index");
-    //     VestingSchedule storage schedule = vestingSchedules[beneficiary][index];
-    //     require(!schedule.released, "Tokens already released");
-    //     require(
-    //         block.timestamp >= schedule.releaseTime,
-    //         "Release time not reached"
-    //     );
-    //     require(
-    //         tokenContract.transferFrom(
-    //             treasury,
-    //             beneficiary,
-    //             schedule.releaseAmount
-    //         ),
-    //         "Transfer failed"
-    //     );
-    //     schedule.released = true;
-    //     return true;
-    // }
-    function executeTransaction(uint256 _txIndex)
+    function executeTransaction(
+        address _beneficiary,
+        uint256 _txIndex,
+        address msg_sender
+    )
         external
-        txExists(_txIndex)
-        notExecuted(_txIndex)
+        txExists(_beneficiary, _txIndex)
+        notExecuted(_beneficiary, _txIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
+        VestingSchedule storage schedule = vestingSchedules[_beneficiary][
+            _txIndex
+        ];
+
+        // Transaction storage transaction = transactions[_txIndex];
 
         require(
-            transaction.numConfirmations >= numConfirmationsRequired,
+            schedule.numConfirmations >= numConfirmationsRequired,
             "cannot execute tx"
         );
-        uint256 amount = transaction.value * (10**18);
+        uint256 amount = schedule.releaseAmount;
         uint256 token_balance = token.balanceOf(treasury);
         require(amount <= token_balance, "token balance is low");
 
         address from = treasury;
-        address to = transaction.to;
+        address to = _beneficiary;
 
         // bool success = token.transferFrom(from, transaction.to, amount);
         // require(success, "tx failed");
-        require(token.transferFrom(from, transaction.to, amount), "tx failed");
-        transaction.executed = true;
+        require(token.transferFrom(from, to, amount), "tx failed");
+        schedule.released = true;
 
         emit Transfer_JCO(from, to, amount);
-        emit ExecuteTransaction(msg.sender, _txIndex);
+        emit ExecuteTransaction(msg_sender, _txIndex);
     }
 
-    function revokeConfirmation(uint256 _txIndex, address msg_sender)
+    function revokeConfirmation(
+        address _beneficiary,
+        uint256 _txIndex,
+        address msg_sender
+    )
         external
-        txExists(_txIndex)
-        notExecuted(_txIndex)
+        txExists(_beneficiary, _txIndex)
+        notExecuted(_beneficiary, _txIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
+        VestingSchedule storage schedule = vestingSchedules[_beneficiary][
+            _txIndex
+        ];
+        // Transaction storage transaction = transactions[_txIndex];
 
-        require(isConfirmed[_txIndex][msg_sender], "tx not confirmed");
+        require(
+            isConfirmed[_beneficiary][_txIndex][msg_sender],
+            "tx not confirmed"
+        );
 
-        transaction.numConfirmations -= 1;
-        isConfirmed[_txIndex][msg_sender] = false;
-
+        schedule.numConfirmations += 1;
+        isConfirmed[_beneficiary][_txIndex][msg_sender] = false;
         emit RevokeConfirmation(msg_sender, _txIndex);
     }
 
@@ -221,29 +277,34 @@ contract MultiSig_Treasury {
         return owners;
     }
 
-    function getTransactionCount() external view returns (uint256) {
-        return transactions.length;
+    function getTransactionCount(address _beneficiary)
+        external
+        view
+        returns (uint256)
+    {
+        return vestingSchedules[_beneficiary].length;
     }
 
-    function getTransaction(uint256 _txIndex)
+    function getVestingSchedule(address _beneficiary, uint256 _txIndex)
         external
         view
         returns (
-            address to,
-            uint256 value,
-            bytes memory data,
-            bool executed,
+            uint256 releaseTime,
+            uint256 releaseAmount,
+            bool released,
             uint256 numConfirmations
         )
     {
-        Transaction storage transaction = transactions[_txIndex];
+        VestingSchedule storage schedule = vestingSchedules[_beneficiary][
+            _txIndex
+        ];
+        // Transaction storage transaction = transactions[_txIndex];
 
         return (
-            transaction.to,
-            transaction.value,
-            transaction.data,
-            transaction.executed,
-            transaction.numConfirmations
+            schedule.releaseTime,
+            schedule.releaseAmount,
+            schedule.released,
+            schedule.numConfirmations
         );
     }
 }
