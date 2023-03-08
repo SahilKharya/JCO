@@ -8,15 +8,16 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "./JCO.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 // ["0xf8e81D47203A594245E36C48e151709F0C19fBe8", "0xD7ACd2a9FD159E69Bb102A1ca21C9a3e3A5F771B","0x7EF2e0048f5bAeDe046f6BF797943daF4ED8CB47","0xDA0bab807633f07f013f94DD0E6A4F96F8742B53","0x358AA13c52544ECCEF6B0ADD0f801012ADAD5eE3","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99","0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99","0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d"]
 
 // ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2", "0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"]
 contract MultiSig_Treasury {
     IERC20 private token;
     address treasury;
+    address public manager;
 
     event Transfer_JCO(address from, address to, uint256 amount);
-
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
     event ConfirmTransaction(address indexed owner, uint256 indexed txIndex);
     event RevokeConfirmation(address indexed owner, uint256 indexed txIndex);
@@ -76,6 +77,10 @@ contract MultiSig_Treasury {
         );
         _;
     }
+    modifier onlyManager() {
+        require(msg.sender == manager, "Not owner");
+        _;
+    }
     struct Wallets {
         address payable _funding;
         address payable _rewards;
@@ -92,6 +97,7 @@ contract MultiSig_Treasury {
         uint256 _numConfirmationsRequired,
         address _token,
         address _treasury,
+        address _manager,
         Wallets memory _wallets
     ) {
         require(_owners.length > 0, "owners required");
@@ -113,6 +119,7 @@ contract MultiSig_Treasury {
         numConfirmationsRequired = _numConfirmationsRequired;
         token = IERC20(_token);
         treasury = _treasury;
+        manager = _manager;
         Time memory time;
 
         // Timestamps
@@ -195,7 +202,7 @@ contract MultiSig_Treasury {
         uint256 _txIndex,
         address msg_sender
     )
-        external
+        external onlyManager
         txExists(_beneficiary, _txIndex)
         notExecuted(_beneficiary, _txIndex)
         notConfirmed(_beneficiary, _txIndex, msg_sender)
@@ -219,7 +226,7 @@ contract MultiSig_Treasury {
         uint256 _txIndex,
         address msg_sender
     )
-        external
+        external onlyManager
         txExists(_beneficiary, _txIndex)
         notExecuted(_beneficiary, _txIndex)
     {
@@ -254,7 +261,7 @@ contract MultiSig_Treasury {
         uint256 _txIndex,
         address msg_sender
     )
-        external
+        external onlyManager
         txExists(_beneficiary, _txIndex)
         notExecuted(_beneficiary, _txIndex)
     {
@@ -273,20 +280,20 @@ contract MultiSig_Treasury {
         emit RevokeConfirmation(msg_sender, _txIndex);
     }
 
-    function getOwners() external view returns (address[] memory) {
+    function getOwners() onlyManager external view returns (address[] memory) {
         return owners;
     }
 
     function getTransactionCount(address _beneficiary)
         external
-        view
+        view onlyManager
         returns (uint256)
     {
         return vestingSchedules[_beneficiary].length;
     }
 
     function getVestingSchedule(address _beneficiary, uint256 _txIndex)
-        external
+        external onlyManager
         view
         returns (
             uint256 releaseTime,

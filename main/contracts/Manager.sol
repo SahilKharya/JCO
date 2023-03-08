@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // 0x617F2E2fD72FD9D5503197092aC168c91465E7f2
 contract JCO_Manager {
-    address sender;
+    address public sender;
     address treasury;
     IERC20 private tokenContract;
     MultiSig_Treasury multi_treasuryContract;
@@ -35,8 +35,17 @@ contract JCO_Manager {
     mapping(address => bool) public isOwner_TGW;
     mapping(address => bool) public isOwner_OW;
 
-    constructor(
-        address _token,
+    constructor(address _token) {
+        sender = msg.sender;
+        tokenContract = IERC20(_token);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == sender, "Not owner");
+        _;
+    }
+
+    function addWallets(
         address _treasury,
         address payable _multi,
         address payable _funding,
@@ -47,9 +56,7 @@ contract JCO_Manager {
         address payable _exchange,
         address payable _foundation,
         address payable _staking
-    ) {
-        sender = msg.sender;
-        tokenContract = IERC20(_token);
+    ) public onlyOwner returns (bool) {
         treasury = _treasury;
 
         multi_treasuryContract = MultiSig_Treasury(_multi);
@@ -82,13 +89,8 @@ contract JCO_Manager {
 
             isOwner_OW[owner] = true;
         }
+        return true;
     }
-
-    // ****     ERC20 Contract Functions  *****
-
-    // function buyNFT(uint256 price) external {
-    //     tokenContract.transferFrom(msg.sender, msg.sender, price);
-    // }
 
     // ****     Multi Sig Contract Functions  *****
 
@@ -110,19 +112,47 @@ contract JCO_Manager {
     //     return multi_treasuryContract.submitTransaction(_to, _value, _data);
     // }
 
-    function confirmTxn_TGW(address _beneficiary, uint256 _txIndex) public onlyOwner_TGW {
-        return multi_treasuryContract.confirmTransaction(_beneficiary, _txIndex, msg.sender);
+    function confirmTxn_TGW(address _beneficiary, uint256 _txIndex)
+        public
+        onlyOwner_TGW
+    {
+        return
+            multi_treasuryContract.confirmTransaction(
+                _beneficiary,
+                _txIndex,
+                msg.sender
+            );
     }
 
-    function executeTxn_TGW(address _beneficiary, uint256 _txIndex) public onlyOwner_TGW {
-        return multi_treasuryContract.executeTransaction(_beneficiary, _txIndex, msg.sender);
+    function executeTxn_TGW(address _beneficiary, uint256 _txIndex)
+        public
+        onlyOwner_TGW
+    {
+        return
+            multi_treasuryContract.executeTransaction(
+                _beneficiary,
+                _txIndex,
+                msg.sender
+            );
     }
 
-    function revokeConfirmation_TGW(address _beneficiary, uint256 _txIndex) public onlyOwner_TGW {
-        return multi_treasuryContract.revokeConfirmation(_beneficiary, _txIndex, msg.sender);
+    function revokeConfirmation_TGW(address _beneficiary, uint256 _txIndex)
+        public
+        onlyOwner_TGW
+    {
+        return
+            multi_treasuryContract.revokeConfirmation(
+                _beneficiary,
+                _txIndex,
+                msg.sender
+            );
     }
 
-    function getTransactionCount_TGW(address _beneficiary) public view returns (uint256) {
+    function getTransactionCount_TGW(address _beneficiary)
+        public
+        view
+        returns (uint256)
+    {
         return multi_treasuryContract.getTransactionCount(_beneficiary);
     }
 
@@ -136,7 +166,8 @@ contract JCO_Manager {
             uint256 numConfirmations
         )
     {
-        return multi_treasuryContract.getVestingSchedule(_beneficiary, _txIndex);
+        return
+            multi_treasuryContract.getVestingSchedule(_beneficiary, _txIndex);
     }
 
     // function addVestingSchedule(
@@ -531,6 +562,3 @@ contract JCO_Manager {
         return msg.sender;
     }
 }
-
-// time -> adress array
-// address -> amount to be transferred

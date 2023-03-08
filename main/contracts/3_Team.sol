@@ -12,8 +12,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"]
 contract Team {
     IERC20 private token;
-    event Transfer_JCO(address from, address to, uint256 amount);
+    address public manager;
 
+    event Transfer_JCO(address from, address to, uint256 amount);
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
     event SubmitTransaction(
         address indexed owner,
@@ -62,11 +63,15 @@ contract Team {
         require(!isConfirmed[_txIndex][msg_sender], "tx already confirmed");
         _;
     }
-
+    modifier onlyManager() {
+        require(msg.sender == manager, "Not owner");
+        _;
+    }
     constructor(
         address[] memory _owners,
         uint256 _numConfirmationsRequired,
-        address _token
+        address _token,
+        address _manager
     ) {
         require(_owners.length > 0, "owners required");
         require(
@@ -87,6 +92,7 @@ contract Team {
 
         numConfirmationsRequired = _numConfirmationsRequired;
         token = IERC20(_token);
+        manager = _manager;
     }
 
     receive() external payable {
@@ -97,7 +103,7 @@ contract Team {
         address _to,
         uint256 _value,
         bytes memory _data
-    ) public {
+    ) external onlyManager {
         uint256 txIndex = transactions.length;
         require(_value > 0, "Value must be greater than zero");
 
@@ -115,7 +121,7 @@ contract Team {
     }
 
     function confirmTransaction(uint256 _txIndex, address msg_sender)
-        public
+        external onlyManager
         txExists(_txIndex)
         notExecuted(_txIndex)
         notConfirmed(_txIndex, msg_sender)
@@ -128,7 +134,7 @@ contract Team {
     }
 
     function executeTransaction(uint256 _txIndex)
-        public
+        external onlyManager
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
@@ -154,7 +160,7 @@ contract Team {
     }
 
     function revokeConfirmation(uint256 _txIndex, address msg_sender)
-        public
+        external onlyManager
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
@@ -168,16 +174,16 @@ contract Team {
         emit RevokeConfirmation(msg_sender, _txIndex);
     }
 
-    function getOwners() public view returns (address[] memory) {
+    function getOwners() external onlyManager view returns (address[] memory) {
         return owners;
     }
 
-    function getTransactionCount() public view returns (uint256) {
+    function getTransactionCount() external onlyManager view returns (uint256) {
         return transactions.length;
     }
 
     function getTransaction(uint256 _txIndex)
-        public
+        external onlyManager
         view
         returns (
             address to,
