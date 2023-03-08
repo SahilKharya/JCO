@@ -48,7 +48,7 @@ contract MultiSig_Treasury {
     mapping(address => mapping(uint256 => mapping(address => bool)))
         public isConfirmed;
 
-    mapping(address => VestingSchedule[]) public vestingSchedules;
+    mapping(address => VestingSchedule[]) vestingSchedules;
 
     modifier txExists(address _beneficiary, uint256 _txIndex) {
         require(
