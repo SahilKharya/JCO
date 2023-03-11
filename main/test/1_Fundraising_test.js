@@ -138,5 +138,13 @@ describe("Fundraising Contract", function () {
 
             expect(tx).to.emit(fundraising, "RevokeConfirmation").withArgs(account1.address, 0);
         });
+
+        it("Should not execute transaction without minimum confirmations", async function () {
+            let tx = await treasury.approveOtherContract(jco.address, multisig.address, 250000000);
+
+            await jco_manager.connect(owner).confirmTxn_TGW(fundraising.address, 0);
+
+            await expect(jco_manager.executeTxn_TGW(fundraising.address, 0)).to.be.rejectedWith("cannot execute tx");
+        });
     });
 });
