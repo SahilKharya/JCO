@@ -125,14 +125,15 @@ contract MultiSig_Treasury {
         // Timestamps
 
         // For testing with shorter time
-        time.month3 = block.timestamp + 200 minutes;
-        time.month6 = block.timestamp + 400 minutes;
-        time.month9 = block.timestamp + 600 minutes;
-        time.month12 = block.timestamp + 900 minutes;
-        time.month15 = block.timestamp + 1100 minutes;
-        time.month18 = block.timestamp + 1600 minutes;
-        time.month24 = block.timestamp + 2100 minutes;
-        time.month36 = block.timestamp + 3000 minutes;
+        time.current_time = block.timestamp;
+        time.month3 = block.timestamp + 10 days;
+        time.month6 = block.timestamp + 30 days;
+        time.month9 = block.timestamp + 60 days;
+        time.month12 = block.timestamp + 90 days;
+        time.month15 = block.timestamp + 110 days;
+        time.month18 = block.timestamp + 160 days;
+        time.month24 = block.timestamp + 210 days;
+        time.month36 = block.timestamp + 300 days;
 
         // function addVestingSchedule(address beneficiary, uint256 releaseTime, uint256 releaseAmount) external{
         addVestingSchedule(_wallets._funding, time.current_time, 5960000);
