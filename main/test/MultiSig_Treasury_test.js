@@ -6,6 +6,7 @@ describe("MultiSig_Treasury Contract", function () {
     let JCO, jco, Fundraising, fundraising, accounts, jco_Manager;
 
     beforeEach(async function () {
+        this.timeout(10000);
         [owner, account1, account2, account3] = await ethers.getSigners();
         accounts = [owner.address, account1.address, account2.address];
         Treasury = await ethers.getContractFactory("Treasury");
