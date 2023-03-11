@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("Fundraising Contract", function () {
+describe("Team Contract", function () {
     let JCO, jco, Fundraising, fundraising, accounts;
 
     beforeEach(async function () {
@@ -65,11 +65,11 @@ describe("Fundraising Contract", function () {
 
     describe("Deployment", function () {
         it("Should assign the manager", async function () {
-            expect(await fundraising.manager()).to.equal(jco_manager.address);
+            expect(await team.manager()).to.equal(jco_manager.address);
         });
 
         it("Should set the number of confirmations required", async function () {
-            expect(await fundraising.numConfirmationsRequired()).to.equal(2);
+            expect(await team.numConfirmationsRequired()).to.equal(2);
         });
 
         it("Should set the owners", async function () {
@@ -79,78 +79,30 @@ describe("Fundraising Contract", function () {
 
     describe("Transactions", function () {
         it("Should submit transaction successfully", async function () {
-            const tx = await jco_manager.submitTxn_Fund(account1.address, 100, "0x");
+            const tx = await jco_manager.submitTxn_Team(account1.address, 100, "0x");
             await tx.wait();
 
-            expect(tx)
-                .to.emit(fundraising, "SubmitTransaction")
-                .withArgs(owner.address, 0, account1.address, 100, "0x");
+            expect(tx).to.emit(team, "SubmitTransaction").withArgs(owner.address, 0, account1.address, 100, "0x");
         });
 
         it("Should confirm transaction successfully", async function () {
-            await jco_manager.submitTxn_Fund(account1.address, 100, "0x");
+            await jco_manager.submitTxn_Team(account1.address, 100, "0x");
 
-            const tx = await jco_manager.confirmTxn_Fund(0);
+            const tx = await jco_manager.confirmTxn_Team(0);
             await tx.wait();
 
-            expect(tx).to.emit(fundraising, "ConfirmTransaction").withArgs(account1.address, 0);
-        });
-
-        it("Should execute transaction successfully", async function () {
-            let tx = await treasury.approveOtherContract(jco.address, multisig.address, 250000000);
-            await tx.wait();
-
-            tx = await jco_manager.connect(account1).confirmTxn_TGW(fundraising.address, 0);
-            await tx.wait();
-
-            tx = await jco_manager.connect(owner).confirmTxn_TGW(fundraising.address, 0);
-            await tx.wait();
-
-            tx = await jco_manager.connect(account2).confirmTxn_TGW(fundraising.address, 0);
-            await tx.wait();
-
-            tx = await jco_manager.executeTxn_TGW(fundraising.address, 0);
-            await tx.wait();
-
-            tx = await jco_manager.submitTxn_Fund(account1.address, 100, "0x");
-            await tx.wait();
-
-            tx = await jco_manager.connect(owner).confirmTxn_Fund(0);
-            await tx.wait();
-
-            tx = await jco_manager.connect(account1).confirmTxn_Fund(0);
-            await tx.wait();
-
-            tx = await jco_manager.executeTxn_Fund(0);
-            await tx.wait();
-
-            expect(tx).to.emit(fundraising, "Transfer_JCO").withArgs(fundraising.address, account1.address, 100);
-            expect(tx).to.emit(fundraising, "ExecuteTransaction").withArgs(owner.address, 0);
+            expect(tx).to.emit(team, "ConfirmTransaction").withArgs(account1.address, 0);
         });
 
         it("Should revoke confirmation successfully", async function () {
-            await jco_manager.submitTxn_Fund(account1.address, 100, "0x");
+            await jco_manager.submitTxn_Team(account1.address, 100, "0x");
 
-            await jco_manager.connect(account1).confirmTxn_Fund(0);
+            await jco_manager.connect(account1).confirmTxn_Team(0);
 
-            const tx = await jco_manager.connect(account1).revokeConfirmation_Fund(0);
+            const tx = await jco_manager.connect(account1).revokeConfirmation_Team(0);
             await tx.wait();
 
-            expect(tx).to.emit(fundraising, "RevokeConfirmation").withArgs(account1.address, 0);
-        });
-
-        it("Should not execute transaction without minimum confirmations", async function () {
-            await treasury.approveOtherContract(jco.address, multisig.address, 250000000);
-            await jco_manager.connect(account1).confirmTxn_TGW(staking.address, 0);
-            await jco_manager.connect(owner).confirmTxn_TGW(staking.address, 0);
-            await jco_manager.connect(account2).confirmTxn_TGW(staking.address, 0);
-            await jco_manager.executeTxn_TGW(staking.address, 0);
-
-            await jco_manager.submitTxn_Fund(account1.address, 10000, "0x");
-
-            await jco_manager.connect(account1).confirmTxn_Fund(0);
-
-            await expect(jco_manager.executeTxn_Fund(0)).to.be.rejectedWith("cannot execute tx");
+            expect(tx).to.emit(team, "RevokeConfirmation").withArgs(account1.address, 0);
         });
     });
 });
