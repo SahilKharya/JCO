@@ -126,23 +126,23 @@ contract MultiSig_Treasury {
 
         // For testing with shorter time
         time.current_time = block.timestamp;
-        time.month3 = block.timestamp + 10 days;
-        time.month6 = block.timestamp + 30 days;
-        time.month9 = block.timestamp + 60 days;
-        time.month12 = block.timestamp + 90 days;
-        time.month15 = block.timestamp + 110 days;
-        time.month18 = block.timestamp + 160 days;
-        time.month24 = block.timestamp + 210 days;
-        time.month36 = block.timestamp + 300 days;
+        time.month3 = block.timestamp + 90 days;
+        time.month6 = block.timestamp + 182 days;
+        time.month9 = block.timestamp + 273 days;
+        time.month12 = block.timestamp + 365 days;
+        time.month15 = block.timestamp + 456 days;
+        time.month18 = block.timestamp + 547 days;
+        time.month24 = block.timestamp + 730 days;
+        time.month36 = block.timestamp + 1095 days;
 
         // function addVestingSchedule(address beneficiary, uint256 releaseTime, uint256 releaseAmount) external{
         addVestingSchedule(_wallets._funding, time.current_time, 5960000);
         addVestingSchedule(_wallets._funding, time.month3, 3960000);
         addVestingSchedule(_wallets._funding, time.month6, 5710000);
-        addVestingSchedule(_wallets._funding, time.month9, 3960000);
-        addVestingSchedule(_wallets._funding, time.month12, 5710000);
+        addVestingSchedule(_wallets._funding, time.month9, 5710000);
+        addVestingSchedule(_wallets._funding, time.month12, 3960000);
         addVestingSchedule(_wallets._funding, time.month15, 5710000);
-        addVestingSchedule(_wallets._funding, time.month18, 5710000);
+        addVestingSchedule(_wallets._funding, time.month18, 4390000);
 
         addVestingSchedule(_wallets._rewards, time.current_time, 1150000);
         addVestingSchedule(_wallets._rewards, time.month3, 1150000);
@@ -153,27 +153,27 @@ contract MultiSig_Treasury {
         addVestingSchedule(_wallets._team, time.month18, 6000000);
         addVestingSchedule(_wallets._team, time.month24, 8000000);
 
-        addVestingSchedule(_wallets._advisors, time.month12, 15000000);
-        addVestingSchedule(_wallets._advisors, time.month24, 15000000);
-        addVestingSchedule(_wallets._advisors, time.month36, 125000000);
+        addVestingSchedule(_wallets._advisors, time.month12, 5000000);
+        addVestingSchedule(_wallets._advisors, time.month24, 5000000);
+        addVestingSchedule(_wallets._advisors, time.month36, 2500000);
 
         addVestingSchedule(_wallets._marketing, time.current_time, 15000000);
         addVestingSchedule(_wallets._marketing, time.month6, 15000000);
-        addVestingSchedule(_wallets._marketing, time.month18, 125000000);
+        addVestingSchedule(_wallets._marketing, time.month18, 12500000);
 
-        addVestingSchedule(_wallets._staking, time.current_time, 15000000);
-        addVestingSchedule(_wallets._staking, time.month3, 15000000);
-        addVestingSchedule(_wallets._staking, time.month6, 15000000);
-        addVestingSchedule(_wallets._staking, time.month9, 15000000);
-        addVestingSchedule(_wallets._staking, time.month12, 15000000);
-        addVestingSchedule(_wallets._staking, time.month18, 15000000);
-        addVestingSchedule(_wallets._staking, time.month24, 15000000);
+        addVestingSchedule(_wallets._staking, time.current_time, 12500000);
+        addVestingSchedule(_wallets._staking, time.month3, 12500000);
+        addVestingSchedule(_wallets._staking, time.month6, 12500000);
+        addVestingSchedule(_wallets._staking, time.month9, 12500000);
+        addVestingSchedule(_wallets._staking, time.month12, 12500000);
+        addVestingSchedule(_wallets._staking, time.month18, 12500000);
+        addVestingSchedule(_wallets._staking, time.month24, 12500000);
 
-        addVestingSchedule(_wallets._exchange, time.current_time, 15000000);
+        addVestingSchedule(_wallets._exchange, time.current_time, 25000000);
 
-        addVestingSchedule(_wallets._foundation, time.month6, 15000000);
-        addVestingSchedule(_wallets._foundation, time.month12, 15000000);
-        addVestingSchedule(_wallets._foundation, time.month18, 125000000);
+        addVestingSchedule(_wallets._foundation, time.month6, 7500000);
+        addVestingSchedule(_wallets._foundation, time.month12, 7500000);
+        addVestingSchedule(_wallets._foundation, time.month18, 7500000);
     }
 
     receive() external payable {
