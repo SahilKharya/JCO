@@ -310,7 +310,7 @@ contract MultiSig_Treasury {
 
         return (
             schedule.releaseTime,
-            schedule.releaseAmount,
+            schedule.releaseAmount / 10**18,
             schedule.released,
             schedule.numConfirmations
         );
